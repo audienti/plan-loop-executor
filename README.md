@@ -51,6 +51,10 @@ The controller then:
 
 The board is the source of truth, not the transcript.
 
+Preflight allows the referenced plan artifact to be uncommitted or branch-local; it
+does not need to be committed on `main` before the loop starts. Changes under
+gitignored paths also do not block startup.
+
 ## Helper commands
 
 From the skill directory:

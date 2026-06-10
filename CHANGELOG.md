@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 - 2026-06-10
+
+- Clarified that the referenced plan artifact does not need to be committed on `main`
+  before the loop can start.
+- Clarified that changes under gitignored paths do not block preflight.
+
 ## 0.1.0 - 2026-06-10
 
 - Packaged Plan Loop Executor as a Codex plugin with `.codex-plugin/plugin.json`.

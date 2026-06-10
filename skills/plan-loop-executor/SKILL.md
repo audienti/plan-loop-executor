@@ -41,6 +41,11 @@ Accepted plan artifacts:
 
 If none exists, stop and ask for the plan.
 
+The referenced plan artifact does not need to be committed on the repo's default
+branch before the loop starts. A tracked, modified, untracked, or branch-local plan is
+valid input as long as the controller can read its current contents and record the exact
+source in the board.
+
 ## When not to use this
 
 If the plan decomposes into fewer than ~4 independently verifiable tasks, the board and
@@ -93,10 +98,12 @@ here, before the loop starts. Mid-loop ambiguity is handled by step 11, not by h
 
 The loop starts from a known-good baseline or it does not start.
 
-- **Clean tree.** `git status` must be clean. If there are uncommitted changes or
-  stray untracked files, stop and ask the user to commit, stash, or discard them.
-  Never stash or discard someone else's work autonomously. (On resume, dirty state is
-  reconciled instead — step 0.)
+- **Blocking worktree changes.** The repo must be clean enough to create a reliable
+  baseline. Uncommitted changes to the referenced plan artifact are allowed, and
+  changes under gitignored paths do not block the loop. Other uncommitted tracked or
+  untracked changes must be resolved before starting unless they are explicitly part of
+  the plan setup. Never stash or discard someone else's work autonomously. (On resume,
+  dirty state is reconciled instead — step 0.)
 - **Known base.** Default base is the repo's default branch as it currently stands.
   If a remote exists, fetch and fast-forward the default branch when it is behind;
   if the local default branch has diverged from its remote, stop and ask. The plan or
@@ -375,8 +382,9 @@ At completion:
 
 If the user does not specify otherwise:
 - resume an existing active board; otherwise create a repo-local board file
-- start from a clean tree on the repo's current default branch, verified green, on a
-  fresh `plan/<plan-slug>` branch
+- start from the repo's current default branch, verified green, on a fresh
+  `plan/<plan-slug>` branch, allowing the referenced plan artifact to be uncommitted
+  and ignoring changes under gitignored paths
 - use one controller and record the active runtime name in `board.controller`
 - use sub-agents only for clearly independent tasks
 - write tests first; one commit per task; repo green at every commit
