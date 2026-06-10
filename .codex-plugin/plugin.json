@@ -1,0 +1,37 @@
+{
+  "name": "plan-loop-executor",
+  "version": "0.1.0",
+  "description": "Execute written implementation plans through a controller-owned, test-first task loop.",
+  "author": {
+    "name": "William Flanagan",
+    "email": "wflanagan@audienti.com"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://github.com/audienti/plan-loop-executor",
+  "repository": "https://github.com/audienti/plan-loop-executor",
+  "keywords": [
+    "plan-execution",
+    "tdd",
+    "controller-loop",
+    "subagents",
+    "implementation-plans"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Plan Loop Executor",
+    "shortDescription": "Run implementation plans as verified controller boards.",
+    "longDescription": "Turns a substantive written plan into a durable execution board, then works it through a controller-owned loop with test-first tasks, bounded retries, integration gates, and explicit close-out.",
+    "developerName": "William Flanagan",
+    "category": "Engineering",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Execute this implementation plan with the plan loop executor.",
+      "Turn this plan into a controller board and work it.",
+      "Resume the active plan loop board in this repo."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

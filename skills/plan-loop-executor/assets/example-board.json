@@ -1,0 +1,96 @@
+{
+  "plan": {
+    "slug": "repair-overrides",
+    "source": "docs/plans/repair-overrides.md",
+    "objective": "Failed buildNextView calls retry once with repair overrides instead of failing the run",
+    "acceptanceCriteria": [
+      "A failed buildNextView retries exactly once with repair overrides applied",
+      "Existing behavior unchanged when the first build succeeds",
+      "Full test suite green"
+    ],
+    "verificationCommands": ["npm test", "npm run typecheck"],
+    "constraints": ["No changes to the public executor API"],
+    "nonGoals": ["Multi-retry policies", "Persisting repair history"]
+  },
+  "board": {
+    "status": "active",
+    "controller": "codex",
+    "concurrencyCap": 3,
+    "base": {
+      "branch": "main",
+      "commit": "9f8e7d6",
+      "verifiedGreen": true
+    },
+    "updatedAt": "2026-06-10T17:30:00Z"
+  },
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Add repair override schema and store",
+      "status": "done",
+      "priority": 1,
+      "dependsOn": [],
+      "ownerLane": "controller",
+      "files": ["src/repair/overrides.ts", "src/repair/overrides.test.ts"],
+      "context": "Plan section 2: overrides are a typed map keyed by failure class. Define the schema and an in-memory store that T2 and T3 build against. Interface task — done serially before fan-out.",
+      "doneWhen": ["Schema exported", "Store get/set covered by tests"],
+      "verification": ["npm test -- overrides"],
+      "outputs": ["src/repair/overrides.ts", "src/repair/overrides.test.ts", "4 tests passed"],
+      "attemptCount": 0,
+      "lastFailure": "",
+      "commit": "a1b2c3d",
+      "notes": "Interface-first; unblocked T2 and T3."
+    },
+    {
+      "id": "T2",
+      "title": "Wrap buildNextView in repairable executor",
+      "status": "running",
+      "priority": 2,
+      "dependsOn": ["T1"],
+      "ownerLane": "subagent",
+      "files": ["src/executor/buildNextView.ts"],
+      "context": "Plan section 3: on first failure, look up overrides by failure class (T1 store) and retry once. Write the failing test first: assert exactly one retry on failure, zero on success. Do not touch src/repair/*.",
+      "doneWhen": ["One retry on failure, zero retries on success"],
+      "verification": ["npm test -- buildNextView"],
+      "outputs": [],
+      "attemptCount": 1,
+      "lastFailure": "Attempt 1 retried twice on double failure; off-by-one in retry guard. Next attempt: count attempts, not failures.",
+      "commit": "",
+      "notes": ""
+    },
+    {
+      "id": "T3",
+      "title": "Add regression tests for one-retry repair path",
+      "status": "ready",
+      "priority": 2,
+      "dependsOn": ["T1"],
+      "ownerLane": "subagent",
+      "files": ["test/integration/repair-path.test.ts"],
+      "context": "Plan section 4: integration-level coverage — success path, single-failure-then-repair path, double-failure path. Builds on the T1 schema only; independent of T2 internals.",
+      "doneWhen": ["Three integration cases pass or fail for the right reasons"],
+      "verification": ["npm test -- repair-path"],
+      "outputs": [],
+      "attemptCount": 0,
+      "lastFailure": "",
+      "commit": "",
+      "notes": ""
+    },
+    {
+      "id": "T4",
+      "title": "Integration gate: full suite and acceptance check",
+      "status": "backlog",
+      "priority": 3,
+      "dependsOn": ["T2", "T3"],
+      "ownerLane": "controller",
+      "files": [],
+      "context": "Run plan-level verificationCommands and confirm each acceptance criterion explicitly before close-out.",
+      "doneWhen": ["npm test green", "npm run typecheck green", "All acceptance criteria confirmed"],
+      "verification": ["npm test", "npm run typecheck"],
+      "outputs": [],
+      "attemptCount": 0,
+      "lastFailure": "",
+      "commit": "",
+      "notes": ""
+    }
+  ]
+}

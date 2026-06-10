@@ -1,0 +1,41 @@
+{
+  "plan": {
+    "slug": "replace-me",
+    "source": "docs/plans/replace-me.md",
+    "objective": "Replace me",
+    "acceptanceCriteria": [],
+    "verificationCommands": [],
+    "constraints": [],
+    "nonGoals": []
+  },
+  "board": {
+    "status": "active",
+    "controller": "current-agent",
+    "concurrencyCap": 3,
+    "base": {
+      "branch": "main",
+      "commit": "",
+      "verifiedGreen": false
+    },
+    "updatedAt": "1970-01-01T00:00:00.000Z"
+  },
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Replace me",
+      "status": "backlog",
+      "priority": 1,
+      "dependsOn": [],
+      "ownerLane": "controller",
+      "files": [],
+      "context": "Plan excerpt, files to read, and constraints a cold worker needs to execute this task without the chat transcript.",
+      "doneWhen": [],
+      "verification": [],
+      "outputs": [],
+      "attemptCount": 0,
+      "lastFailure": "",
+      "commit": "",
+      "notes": ""
+    }
+  ]
+}

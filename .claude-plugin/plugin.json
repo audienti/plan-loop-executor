@@ -1,0 +1,19 @@
+{
+  "name": "plan-loop-executor",
+  "description": "Execute written implementation plans through a controller-owned, test-first task loop for Claude Code.",
+  "version": "0.1.0",
+  "author": {
+    "name": "William Flanagan",
+    "email": "wflanagan@audienti.com"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://github.com/audienti/plan-loop-executor",
+  "repository": "https://github.com/audienti/plan-loop-executor",
+  "keywords": [
+    "plan-execution",
+    "tdd",
+    "controller-loop",
+    "subagents",
+    "implementation-plans"
+  ]
+}
