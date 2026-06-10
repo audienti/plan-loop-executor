@@ -60,6 +60,31 @@ root for sub-agent work. It reuses an obvious ignored worktree folder when one a
 exists; otherwise it creates `.worktrees/` and adds `.worktrees/` to
 `.gitignore`. Sub-agent git worktrees should then be created under that ignored root.
 
+## Model routing
+
+Plan with a strong model, execute with the cheapest model that can pass verification.
+
+- Every task gets a `modelTier` at decomposition: `fast` for mechanical, tightly
+  specified work, `default` for ordinary implementation, and `max` for interfaces,
+  cross-cutting changes, and hard debugging.
+- `board.models` maps tiers to concrete models per board. `"inherit"` uses the
+  session model, so routing is off until a board opts in — and model names never live
+  in the skill itself, so nothing rots when models change.
+- Dispatch resolves the tier and passes the model to the worker (for example
+  `codex exec -m <model>`).
+- A failed attempt may escalate the task's tier one step as part of trying a
+  different approach, recorded on the board.
+- Choose tier mappings by a model's demonstrated strength on that kind of work and by
+  attempts-per-solve, not by size or price-per-token. Close-out (and
+  `board_status.py`) report attempts-per-solve by tier, so every board builds local
+  routing evidence for the next one.
+- Provider errors — rate limits, stale model names — are not task failures: dispatch
+  falls back one tier (or to `"inherit"`) without consuming an attempt, and the
+  substitution is noted on the board.
+- The controller always runs on the session model. The loop economizes on workers,
+  never on the judge — tests-first plus controller re-verification is what makes
+  cheap workers safe, bounding a weak model's failure to one retried task.
+
 ## Helper commands
 
 From the skill directory:

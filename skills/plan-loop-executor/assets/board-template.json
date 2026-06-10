@@ -13,6 +13,11 @@
     "controller": "current-agent",
     "concurrencyCap": 3,
     "worktreeRoot": ".worktrees",
+    "models": {
+      "fast": "inherit",
+      "default": "inherit",
+      "max": "inherit"
+    },
     "base": {
       "branch": "main",
       "commit": "",
@@ -28,6 +33,7 @@
       "priority": 1,
       "dependsOn": [],
       "ownerLane": "controller",
+      "modelTier": "default",
       "files": [],
       "context": "Plan excerpt, files to read, and constraints a cold worker needs to execute this task without the chat transcript.",
       "doneWhen": [],

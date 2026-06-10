@@ -39,7 +39,9 @@ def main():
         print("\nin flight:")
         for t in in_flight:
             extra = f"  [attempt {t.get('attemptCount', 0) + 1}]" if t.get("attemptCount") else ""
-            print(f"  {t.get('id')}: ({t.get('status')}) {t.get('title')}{extra}")
+            tier = t.get("modelTier")
+            tier_tag = f"  [{tier}]" if tier and tier != "default" else ""
+            print(f"  {t.get('id')}: ({t.get('status')}) {t.get('title')}{extra}{tier_tag}")
 
     if by_status["blocked"]:
         print("\nblocked:")
@@ -51,7 +53,19 @@ def main():
     if nxt:
         print("\nnext up:")
         for t in nxt[:3]:
-            print(f"  {t.get('id')}: {t.get('title')} (priority {t.get('priority', '?')})")
+            tier = t.get("modelTier", "default")
+            print(f"  {t.get('id')}: {t.get('title')} (priority {t.get('priority', '?')}, {tier})")
+
+    if by_status["done"]:
+        by_tier = {}
+        for t in by_status["done"]:
+            tier = t.get("modelTier", "default")
+            by_tier.setdefault(tier, []).append(t.get("attemptCount", 0) + 1)
+        stats = "  ".join(
+            f"{tier}: {sum(v) / len(v):.1f} over {len(v)} task{'s' if len(v) != 1 else ''}"
+            for tier, v in sorted(by_tier.items())
+        )
+        print(f"\nattempts/solve by tier: {stats}")
 
     if by_status["deferred"]:
         print("\ndeferred: " + ", ".join(t.get("id", "?") for t in by_status["deferred"]))

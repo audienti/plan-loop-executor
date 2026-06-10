@@ -1,6 +1,6 @@
 {
   "name": "plan-loop-executor",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Execute written implementation plans through a controller-owned, test-first task loop.",
   "author": {
     "name": "William Flanagan",

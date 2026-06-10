@@ -146,6 +146,7 @@ Every task must include:
 - `priority`
 - `dependsOn`
 - `ownerLane`
+- `modelTier`
 - `files`
 - `context`
 - `doneWhen`
@@ -168,6 +169,15 @@ Allowed task statuses:
 Allowed `ownerLane` values:
 - `controller` — the controller executes it directly
 - `subagent` — independent; dispatchable under step 6
+
+Allowed `modelTier` values (assigned in step 4, resolved at dispatch in step 6):
+- `fast` — mechanical, tightly specified work; cheapest capable model
+- `default` — ordinary implementation work
+- `max` — judgment-heavy or high-blast-radius work; strongest available model
+
+`board.models` maps each tier to a concrete model for this board, with `"inherit"`
+meaning "use the session model". Concrete model names live only on the board — never
+in this skill — so routing survives model renames and price changes.
 
 Board lifecycle: `board.status` is `active` while the loop runs, `complete` when all
 acceptance criteria pass, `abandoned` if the effort is stopped early (record why).
@@ -210,6 +220,30 @@ Sequencing rules:
 - **No broken commit points.** Every task must leave the repo green at its commit. If a
   change inherently passes through a broken state, widen the task to contain the whole
   transition, or resequence — never park breakage on the board for later.
+
+Model routing:
+- Assign every task a `modelTier` at decomposition time, while its complexity is
+  already being judged:
+  - `fast`: mechanical and tightly specified — renames, boilerplate, test scaffolding
+    from a clear spec, doc updates, config plumbing.
+  - `default`: ordinary implementation tasks.
+  - `max`: interface and contract tasks, cross-cutting changes, hard debugging, and
+    anything security- or data-sensitive.
+- When in doubt, route up. A cheap worker that fails verification twice costs more in
+  tokens and wall-clock than a strong worker that passes once.
+- Capability is shaped, not scalar. A model can be strong at tool-heavy mechanical
+  work and weak at code synthesis, or the reverse. Choose `board.models` mappings by a
+  model's demonstrated strength on that kind of work, not by size or price.
+- Judge mappings by attempts-per-solve, not cost-per-token. The board records
+  `attemptCount` per task and close-out reports it by tier — that local evidence beats
+  public leaderboards for tuning the next board's map.
+- Tiers route dispatched sub-agents only. The controller always runs on the session
+  model: decomposition, verification judgment, and retry decisions are the most
+  expensive tokens to get wrong. Economize on workers, never on the judge.
+- Tag `controller`-lane tasks `default`; their tier is not used for dispatch.
+- Set the `board.models` map when creating the board. Leaving every tier `"inherit"`
+  disables routing — tier tags still document complexity and can be activated later by
+  editing the map.
 
 Selection order for `ready` tasks: dependency order first, then highest `priority`,
 then the task that unblocks the most others, then risk-first.
@@ -266,6 +300,23 @@ exists. Never simulate a sub-agent by role-playing one inside the controller's o
 context. If no dispatch mechanism is available, execute tasks sequentially as the
 controller and say so — do not pretend the fan-out happened.
 
+**Model selection.** Resolve the task's `modelTier` through `board.models` before
+dispatch:
+- `"inherit"` or unmapped: pass no model flag — the worker uses the session default.
+- anything else: pass the mapped model to the dispatch command (for example
+  `codex exec -m <model> ...`, or this harness's equivalent model option).
+
+Where the harness supports a reasoning-effort setting, the controller may raise it for
+`max`-tier and escalated tasks instead of, or in addition to, changing the model. The
+controller itself never runs on a downgraded model.
+
+**Dispatch failure is not task failure.** Provider errors — rate limits, auth
+failures, stale or unavailable model names — never touch `attemptCount` or
+`lastFailure`; those fields measure the work, not the infrastructure. On a provider
+error, retry the dispatch on the next tier up (fast → default → max), or `"inherit"`
+if already at `max`, and record the substitution in the task's `notes`. If even
+`"inherit"` cannot dispatch, the controller executes the task directly.
+
 When dispatch uses git worktrees, create them under `board.worktreeRoot` (for example
 `.worktrees/<plan-slug>/<task-id>/`) so task-local checkouts stay out of tracked
 repo state. Do not create ad hoc sibling worktree folders outside the recorded ignored
@@ -301,6 +352,9 @@ user input:
    - increment `attemptCount`, record the cause in `lastFailure`
    - attempt 2 must take a meaningfully different approach — the board says why the
      last attempt failed; use it
+   - for dispatched tasks, escalating `modelTier` one step (fast → default → max) is a
+     valid part of a different approach — update the task's tier and record the
+     escalation in `notes`
    - at attempt 3, stop retrying: mark `blocked` with the exact blocker, or split into
      smaller tasks
 10. **Integration gate.** Whenever a dependency chain completes — and before starting
@@ -372,6 +426,8 @@ When all acceptance criteria pass:
 - mark all completed tasks accurately; set `board.status: "complete"`
 - summarize remaining deferred items and batched questions
 - report what verified
+- report attempts-per-solve by model tier (and mapped model) — the local routing
+  evidence for tuning the next board's `board.models`
 - report any residual risks
 
 If the effort is stopped early, set `board.status: "abandoned"` and record why.
@@ -382,6 +438,7 @@ During execution:
 - give short progress updates
 - reference the active board path
 - say what task is being worked
+- announce routing on dispatch: task id, tier, and resolved model
 - say what verified or blocked
 
 At completion:
@@ -403,6 +460,8 @@ If the user does not specify otherwise:
   `.worktrees/`, and record it as `board.worktreeRoot`
 - use one controller and record the active runtime name in `board.controller`
 - use sub-agents only for clearly independent tasks
+- tag every task with a `modelTier` and map tiers in `board.models`, leaving every
+  tier `"inherit"` (routing off) until a board opts in
 - write tests first; one commit per task; repo green at every commit
 - keep the loop running until the plan is actually implemented, a stall is detected, or
   a real blocker appears

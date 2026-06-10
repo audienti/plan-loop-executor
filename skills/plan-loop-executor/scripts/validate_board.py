@@ -11,9 +11,10 @@ import sys
 TASK_STATUSES = {"backlog", "ready", "running", "verify", "done", "blocked", "deferred"}
 BOARD_STATUSES = {"active", "complete", "abandoned"}
 OWNER_LANES = {"controller", "subagent"}
+MODEL_TIERS = {"fast", "default", "max"}
 REQUIRED_TASK_FIELDS = [
-    "id", "title", "status", "priority", "dependsOn", "ownerLane", "files",
-    "context", "doneWhen", "verification", "outputs", "attemptCount",
+    "id", "title", "status", "priority", "dependsOn", "ownerLane", "modelTier",
+    "files", "context", "doneWhen", "verification", "outputs", "attemptCount",
     "lastFailure", "commit", "notes",
 ]
 
@@ -41,6 +42,21 @@ def validate(data):
     elif not base.get("verifiedGreen"):
         warnings.append("board.base.verifiedGreen is false — green trunk has no verified baseline")
 
+    models = board.get("models")
+    if models is not None:
+        if not isinstance(models, dict):
+            errors.append("board.models must be an object mapping tiers to model names")
+        else:
+            for tier, model in models.items():
+                if tier not in MODEL_TIERS:
+                    errors.append(
+                        f"board.models key {tier!r} must be one of {sorted(MODEL_TIERS)}"
+                    )
+                if not isinstance(model, str) or not model:
+                    errors.append(
+                        f"board.models.{tier} must be a non-empty string ('inherit' = session model)"
+                    )
+
     tasks = data.get("tasks", [])
     if not tasks:
         warnings.append("no tasks on board")
@@ -62,6 +78,10 @@ def validate(data):
         if t.get("ownerLane") not in OWNER_LANES:
             errors.append(
                 f"{tid}: ownerLane {t.get('ownerLane')!r} must be one of {sorted(OWNER_LANES)}"
+            )
+        if t.get("modelTier") not in MODEL_TIERS:
+            errors.append(
+                f"{tid}: modelTier {t.get('modelTier')!r} must be one of {sorted(MODEL_TIERS)}"
             )
         for dep in t.get("dependsOn", []):
             if dep not in by_id:

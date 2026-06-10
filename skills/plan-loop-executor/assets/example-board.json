@@ -17,6 +17,11 @@
     "controller": "codex",
     "concurrencyCap": 3,
     "worktreeRoot": ".worktrees",
+    "models": {
+      "fast": "gpt-5.1-codex-mini",
+      "default": "inherit",
+      "max": "inherit"
+    },
     "base": {
       "branch": "main",
       "commit": "9f8e7d6",
@@ -32,6 +37,7 @@
       "priority": 1,
       "dependsOn": [],
       "ownerLane": "controller",
+      "modelTier": "default",
       "files": ["src/repair/overrides.ts", "src/repair/overrides.test.ts"],
       "context": "Plan section 2: overrides are a typed map keyed by failure class. Define the schema and an in-memory store that T2 and T3 build against. Interface task — done serially before fan-out.",
       "doneWhen": ["Schema exported", "Store get/set covered by tests"],
@@ -49,6 +55,7 @@
       "priority": 2,
       "dependsOn": ["T1"],
       "ownerLane": "subagent",
+      "modelTier": "max",
       "files": ["src/executor/buildNextView.ts"],
       "context": "Plan section 3: on first failure, look up overrides by failure class (T1 store) and retry once. Write the failing test first: assert exactly one retry on failure, zero on success. Do not touch src/repair/*.",
       "doneWhen": ["One retry on failure, zero retries on success"],
@@ -57,7 +64,7 @@
       "attemptCount": 1,
       "lastFailure": "Attempt 1 retried twice on double failure; off-by-one in retry guard. Next attempt: count attempts, not failures.",
       "commit": "",
-      "notes": ""
+      "notes": "Escalated modelTier default -> max for attempt 2."
     },
     {
       "id": "T3",
@@ -66,6 +73,7 @@
       "priority": 2,
       "dependsOn": ["T1"],
       "ownerLane": "subagent",
+      "modelTier": "fast",
       "files": ["test/integration/repair-path.test.ts"],
       "context": "Plan section 4: integration-level coverage — success path, single-failure-then-repair path, double-failure path. Builds on the T1 schema only; independent of T2 internals.",
       "doneWhen": ["Three integration cases pass or fail for the right reasons"],
@@ -83,6 +91,7 @@
       "priority": 3,
       "dependsOn": ["T2", "T3"],
       "ownerLane": "controller",
+      "modelTier": "default",
       "files": [],
       "context": "Run plan-level verificationCommands and confirm each acceptance criterion explicitly before close-out.",
       "doneWhen": ["npm test green", "npm run typecheck green", "All acceptance criteria confirmed"],

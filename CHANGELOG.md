@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0 - 2026-06-10
+
+- Added model routing: every task carries a `modelTier` (`fast`, `default`, `max`)
+  assigned at decomposition based on task complexity.
+- Added `board.models`, a per-board map from tiers to concrete models, with
+  `"inherit"` as the default so routing is opt-in and model names never live in the
+  skill.
+- Dispatch now resolves the task tier through `board.models` and passes the model to
+  the worker command (for example `codex exec -m <model>`).
+- Failed attempts may escalate a task's tier one step as part of a different
+  approach; the controller itself always runs on the session model.
+- Board validation enforces tier values and the `board.models` shape; the status
+  helper shows non-default tiers in flight and tier on next-up tasks.
+- Routing guidance: map tiers by a model's demonstrated strength per work type
+  (capability is shaped, not scalar) and judge mappings by attempts-per-solve.
+- Provider/dispatch failures no longer consume task attempts; dispatch falls back one
+  tier (or to `"inherit"`) and records the substitution in task notes.
+- Close-out and `board_status.py` report attempts-per-solve by model tier as local
+  routing evidence; dispatch announcements include task id, tier, and resolved model.
+
 ## 0.1.2 - 2026-06-10
 
 - Added setup guidance to ensure a repo-local gitignored worktree root exists,
