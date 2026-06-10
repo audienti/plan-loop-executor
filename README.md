@@ -55,6 +55,11 @@ Preflight allows the referenced plan artifact to be uncommitted or branch-local;
 does not need to be committed on `main` before the loop starts. Changes under
 gitignored paths also do not block startup.
 
+During setup, the controller also ensures there is a repo-local gitignored worktree
+root for sub-agent work. It reuses an obvious ignored worktree folder when one already
+exists; otherwise it creates `.worktrees/` and adds `.worktrees/` to
+`.gitignore`. Sub-agent git worktrees should then be created under that ignored root.
+
 ## Helper commands
 
 From the skill directory:
@@ -77,6 +82,7 @@ skills/plan-loop-executor/assets/board-template.json
 skills/plan-loop-executor/assets/example-board.json
 skills/plan-loop-executor/scripts/board_status.py
 skills/plan-loop-executor/scripts/validate_board.py
+.worktrees/                       # created in target repos during loop setup when needed
 ```
 
 ## Marketplace source

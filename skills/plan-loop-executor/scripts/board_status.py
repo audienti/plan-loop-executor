@@ -27,6 +27,8 @@ def main():
 
     print(f"plan:     {plan.get('slug', '?')} — {plan.get('objective', '')}")
     print(f"board:    {board.get('status', '?')}  (updated {board.get('updatedAt', '?')})")
+    if board.get("worktreeRoot"):
+        print(f"worktree: {board.get('worktreeRoot')}")
     print(
         f"progress: {len(by_status['done'])}/{len(tasks)} done   "
         + "  ".join(f"{s}:{len(v)}" for s, v in by_status.items() if v)

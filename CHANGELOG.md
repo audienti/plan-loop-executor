@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2 - 2026-06-10
+
+- Added setup guidance to ensure a repo-local gitignored worktree root exists,
+  defaulting to `.worktrees/` when no obvious ignored worktree folder is present.
+- Documented that sub-agent git worktrees should be created under the recorded ignored
+  worktree root.
+- Added `board.worktreeRoot` to the board templates and status output.
+
 ## 0.1.1 - 2026-06-10
 
 - Clarified that the referenced plan artifact does not need to be committed on `main`

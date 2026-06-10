@@ -118,6 +118,13 @@ The loop starts from a known-good baseline or it does not start.
     new may join them.
 - **Own branch.** Create `plan/<plan-slug>` from the base before the first commit. An
   unattended loop does not commit to the default branch.
+- **Ignored worktree root.** Ensure the repo has a repo-local gitignored directory for
+  sub-agent git worktrees before any dispatch. Reuse an existing ignored directory only
+  when it is obviously intended for git worktrees. If none exists, create
+  `.worktrees/` and add `.worktrees/` to `.gitignore` as a setup change. This
+  setup change is allowed even though other unrelated uncommitted changes still gate
+  startup. Record the selected path in `board.worktreeRoot` and use that root for
+  subsequent sub-agent worktrees.
 
 ### 3. Create the execution board
 
@@ -165,6 +172,8 @@ Allowed `ownerLane` values:
 Board lifecycle: `board.status` is `active` while the loop runs, `complete` when all
 acceptance criteria pass, `abandoned` if the effort is stopped early (record why).
 `board.base` records the preflight baseline from step 2.
+`board.worktreeRoot` records the repo-local ignored directory used for sub-agent git
+worktrees, usually `.worktrees/`.
 
 After every board write, validate it:
 
@@ -256,6 +265,11 @@ non-interactive prompt mode, or this harness's native sub-agent primitive if one
 exists. Never simulate a sub-agent by role-playing one inside the controller's own
 context. If no dispatch mechanism is available, execute tasks sequentially as the
 controller and say so — do not pretend the fan-out happened.
+
+When dispatch uses git worktrees, create them under `board.worktreeRoot` (for example
+`.worktrees/<plan-slug>/<task-id>/`) so task-local checkouts stay out of tracked
+repo state. Do not create ad hoc sibling worktree folders outside the recorded ignored
+root.
 
 **Dispatch prompt** is assembled mechanically from the board and plan, nothing else:
 - plan objective, non-goals, constraints
@@ -385,6 +399,8 @@ If the user does not specify otherwise:
 - start from the repo's current default branch, verified green, on a fresh
   `plan/<plan-slug>` branch, allowing the referenced plan artifact to be uncommitted
   and ignoring changes under gitignored paths
+- create or reuse a repo-local ignored git worktree root, defaulting to
+  `.worktrees/`, and record it as `board.worktreeRoot`
 - use one controller and record the active runtime name in `board.controller`
 - use sub-agents only for clearly independent tasks
 - write tests first; one commit per task; repo green at every commit

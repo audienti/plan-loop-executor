@@ -16,6 +16,7 @@
     "status": "active",
     "controller": "codex",
     "concurrencyCap": 3,
+    "worktreeRoot": ".worktrees",
     "base": {
       "branch": "main",
       "commit": "9f8e7d6",

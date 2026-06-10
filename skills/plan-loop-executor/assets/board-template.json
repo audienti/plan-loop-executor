@@ -12,6 +12,7 @@
     "status": "active",
     "controller": "current-agent",
     "concurrencyCap": 3,
+    "worktreeRoot": ".worktrees",
     "base": {
       "branch": "main",
       "commit": "",
