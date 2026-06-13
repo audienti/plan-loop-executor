@@ -23,6 +23,7 @@ def main():
     plan = data.get("plan", {})
     board = data.get("board", {})
     tasks = data.get("tasks", [])
+    messages = data.get("messages", [])
     by_status = {s: [t for t in tasks if t.get("status") == s] for s in STATUS_ORDER}
 
     print(f"plan:     {plan.get('slug', '?')} — {plan.get('objective', '')}")
@@ -38,6 +39,10 @@ def main():
     )
     if board.get("parallelismNote"):
         print(f"parallel: {board.get('parallelismNote')}")
+    if isinstance(messages, list):
+        open_messages = [m for m in messages if isinstance(m, dict) and m.get("status") == "open"]
+        if open_messages:
+            print(f"messages: {len(open_messages)} open")
 
     in_flight = by_status["running"] + by_status["verify"]
     if in_flight:
@@ -58,6 +63,21 @@ def main():
         for t in by_status["blocked"]:
             why = t.get("lastFailure") or t.get("notes") or "no reason recorded"
             print(f"  {t.get('id')}: {t.get('title')} — {why}")
+
+    if isinstance(messages, list):
+        open_messages = [m for m in messages if isinstance(m, dict) and m.get("status") == "open"]
+        if open_messages:
+            print("\nopen messages:")
+            for m in open_messages[:5]:
+                targets = (
+                    ", ".join(str(target) for target in m.get("toTasks", []))
+                    if isinstance(m.get("toTasks"), list)
+                    else "?"
+                )
+                print(
+                    f"  {m.get('id')}: [{m.get('type')}] {m.get('subject')} "
+                    f"({m.get('fromTask')} -> {targets or 'all'})"
+                )
 
     nxt = sorted(by_status["ready"], key=lambda t: (t.get("priority", 99), t.get("id", "")))
     if nxt:

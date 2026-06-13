@@ -122,5 +122,27 @@
       "commit": "",
       "notes": ""
     }
+  ],
+  "messages": [
+    {
+      "id": "M1",
+      "fromTask": "T2",
+      "toTasks": ["T3"],
+      "type": "interface-note",
+      "subject": "Use the T1 override store instead of local fixtures",
+      "body": "T2 found the retry path should import the override store exported by T1. T3 should assert against that public store instead of creating a separate integration fixture.",
+      "createdAt": "2026-06-10T17:28:00Z",
+      "status": "open"
+    },
+    {
+      "id": "M2",
+      "fromTask": "T2",
+      "toTasks": ["controller"],
+      "type": "risk",
+      "subject": "Double-failure path can mask retry count bugs",
+      "body": "The first implementation retried twice on double failure. Keep the integration test explicit about attempts, not just final error shape.",
+      "createdAt": "2026-06-10T17:30:00Z",
+      "status": "open"
+    }
   ]
 }

@@ -12,10 +12,15 @@ TASK_STATUSES = {"backlog", "ready", "running", "verify", "done", "blocked", "de
 BOARD_STATUSES = {"active", "complete", "abandoned"}
 OWNER_LANES = {"controller", "subagent"}
 MODEL_TIERS = {"fast", "default", "max"}
+MESSAGE_TYPES = {"blocker", "interface-note", "handoff", "discovery", "question", "risk"}
+MESSAGE_STATUSES = {"open", "acknowledged", "resolved", "superseded"}
 REQUIRED_TASK_FIELDS = [
     "id", "title", "status", "priority", "dependsOn", "ownerLane", "modelTier",
     "files", "context", "doneWhen", "verification", "outputs", "attemptCount",
     "lastFailure", "commit", "notes",
+]
+REQUIRED_MESSAGE_FIELDS = [
+    "id", "fromTask", "toTasks", "type", "subject", "body", "createdAt", "status",
 ]
 
 
@@ -153,6 +158,55 @@ def validate(data):
         errors.append(
             f"dependency cycle among: {sorted(i for i, d in indeg.items() if d > 0)}"
         )
+
+    messages = data.get("messages", [])
+    if messages is None:
+        messages = []
+    if not isinstance(messages, list):
+        errors.append("messages must be an array when set")
+    else:
+        message_ids = [m.get("id") for m in messages if isinstance(m, dict) and m.get("id")]
+        message_dupes = sorted({i for i in message_ids if message_ids.count(i) > 1})
+        if message_dupes:
+            errors.append(f"duplicate message ids: {message_dupes}")
+        for m in messages:
+            if not isinstance(m, dict):
+                errors.append("message entries must be objects")
+                continue
+            mid = m.get("id") or "<missing-message-id>"
+            for field in REQUIRED_MESSAGE_FIELDS:
+                if field not in m:
+                    errors.append(f"{mid}: missing message field {field!r}")
+            if not isinstance(m.get("id"), str) or not m.get("id"):
+                errors.append(f"{mid}: id must be a non-empty string")
+            if not isinstance(m.get("fromTask"), str) or not m.get("fromTask"):
+                errors.append(f"{mid}: fromTask must be a non-empty string")
+            if m.get("type") not in MESSAGE_TYPES:
+                errors.append(
+                    f"{mid}: type {m.get('type')!r} must be one of {sorted(MESSAGE_TYPES)}"
+                )
+            if m.get("status") not in MESSAGE_STATUSES:
+                errors.append(
+                    f"{mid}: status {m.get('status')!r} must be one of {sorted(MESSAGE_STATUSES)}"
+                )
+            if m.get("fromTask") != "controller" and m.get("fromTask") not in by_id:
+                errors.append(f"{mid}: fromTask references unknown task {m.get('fromTask')!r}")
+            to_tasks = m.get("toTasks", [])
+            if not isinstance(to_tasks, list):
+                errors.append(f"{mid}: toTasks must be an array")
+            else:
+                for target in to_tasks:
+                    if not isinstance(target, str) or not target:
+                        errors.append(f"{mid}: toTasks entries must be non-empty strings")
+                        continue
+                    if target != "controller" and target not in by_id:
+                        errors.append(f"{mid}: toTasks references unknown task {target!r}")
+            if not isinstance(m.get("createdAt"), str) or not m.get("createdAt"):
+                errors.append(f"{mid}: createdAt must be a non-empty string")
+            if not m.get("subject"):
+                warnings.append(f"{mid}: subject is empty")
+            if m.get("status") == "open" and not m.get("body"):
+                warnings.append(f"{mid}: open message has empty body")
 
     return errors, warnings
 

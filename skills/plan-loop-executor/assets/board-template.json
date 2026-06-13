@@ -52,5 +52,17 @@
       "commit": "",
       "notes": ""
     }
+  ],
+  "messages": [
+    {
+      "id": "M1",
+      "fromTask": "controller",
+      "toTasks": [],
+      "type": "discovery",
+      "subject": "Replace me",
+      "body": "Structured coordination messages from workers are recorded here by the controller.",
+      "createdAt": "1970-01-01T00:00:00.000Z",
+      "status": "resolved"
+    }
   ]
 }

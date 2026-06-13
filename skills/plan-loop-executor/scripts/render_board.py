@@ -23,6 +23,7 @@ STATUS_LABELS = {
     "blocked": "Blocked",
     "deferred": "Deferred",
 }
+MESSAGE_TYPES = {"blocker", "interface-note", "handoff", "discovery", "question", "risk"}
 
 
 def utc_now():
@@ -249,10 +250,54 @@ def render_parallel_audit(tasks, by_id, board):
     """
 
 
+def message_sort_key(message):
+    status_rank = 0 if message.get("status") == "open" else 1
+    created = str(message.get("createdAt", ""))
+    return (status_rank, created, str(message.get("id", "")))
+
+
+def render_messages(messages):
+    if not isinstance(messages, list):
+        messages = []
+    usable = [m for m in messages if isinstance(m, dict)]
+    open_count = sum(1 for m in usable if m.get("status") == "open")
+    cards = []
+    for message in sorted(usable, key=message_sort_key):
+        msg_type = message.get("type", "unknown")
+        type_class = msg_type if msg_type in MESSAGE_TYPES else "unknown"
+        targets = message.get("toTasks") if isinstance(message.get("toTasks"), list) else []
+        target_text = ", ".join(str(t) for t in targets) if targets else "all"
+        cards.append(f"""
+          <article class="message message-{h(type_class)}">
+            <div class="message-head">
+              <span class="task-id">{h(message.get("id", "?"))}</span>
+              <b>{h(message.get("subject", ""))}</b>
+            </div>
+            <div class="chips">
+              {chip("type", msg_type)}
+              {chip("status", message.get("status"))}
+              {chip("from", message.get("fromTask"))}
+              {chip("to", target_text)}
+              {chip("created", message.get("createdAt"))}
+            </div>
+            <p>{h(message.get("body", ""))}</p>
+          </article>
+        """)
+    body = "".join(cards) if cards else "<div class=\"empty\">No coordination messages</div>"
+    return f"""
+      <section class="panel">
+        <h2>Coordination Messages <span class="muted">{h(open_count)} open</span></h2>
+        <p class="muted">Controller-mediated messages only. These are context artifacts, not workflow state transitions.</p>
+        <div class="messages">{body}</div>
+      </section>
+    """
+
+
 def render_html(data, rendered_at):
     plan = data.get("plan", {})
     board = data.get("board", {})
     tasks = data.get("tasks", [])
+    messages = data.get("messages", [])
     by_id = {task.get("id"): task for task in tasks if task.get("id")}
     by_status = {
         status: sorted([task for task in tasks if task.get("status") == status], key=sort_key)
@@ -262,6 +307,11 @@ def render_html(data, rendered_at):
     total = len(tasks)
     progress = f"{done}/{total}" if total else "0/0"
     models = board.get("models") if isinstance(board.get("models"), dict) else {}
+    open_message_count = (
+        sum(1 for m in messages if isinstance(m, dict) and m.get("status") == "open")
+        if isinstance(messages, list)
+        else 0
+    )
 
     columns = []
     for status in STATUS_ORDER:
@@ -383,6 +433,26 @@ def render_html(data, rendered_at):
     .task-deferred {{ border-left-color: var(--deferred); }}
     .task header {{ display: flex; gap: 8px; align-items: baseline; }}
     .task-id {{ font-weight: 700; color: var(--accent); }}
+    .messages {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 10px;
+    }}
+    .message {{
+      border: 1px solid var(--border);
+      border-left: 4px solid #64748b;
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+    }}
+    .message-blocker {{ border-left-color: var(--blocked); }}
+    .message-risk {{ border-left-color: var(--running); }}
+    .message-question {{ border-left-color: var(--verify); }}
+    .message-interface-note {{ border-left-color: var(--accent); }}
+    .message-handoff {{ border-left-color: var(--ready); }}
+    .message-discovery {{ border-left-color: var(--done); }}
+    .message-head {{ display: flex; gap: 8px; align-items: baseline; }}
+    .message p {{ margin: 8px 0 0; }}
     .chips {{ margin: 7px 0; }}
     .field {{ border-top: 1px solid #edf0f2; padding-top: 7px; margin-top: 7px; }}
     .label {{ color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0; }}
@@ -404,12 +474,14 @@ def render_html(data, rendered_at):
       {chip("progress", progress)}
       {chip("controller", board.get("controller"))}
       {chip("worktrees", board.get("worktreeRoot"))}
+      {chip("open messages", open_message_count)}
       {chip("board updated", board.get("updatedAt"))}
       {chip("rendered", rendered_at)}
     </div>
     <div class="topline">{model_rows}</div>
   </header>
   {render_parallel_audit(tasks, by_id, board)}
+  {render_messages(messages)}
   <main class="board">
     {''.join(columns)}
   </main>

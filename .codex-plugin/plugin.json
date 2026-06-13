@@ -1,6 +1,6 @@
 {
   "name": "plan-loop-executor",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Execute written implementation plans through a controller-owned, test-first task loop.",
   "author": {
     "name": "William Flanagan",
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "Plan Loop Executor",
     "shortDescription": "Run implementation plans as verified controller boards.",
-    "longDescription": "Turns a substantive written plan into a durable execution board and read-only HTML kanban snapshot, then works it through a controller-owned loop with test-first tasks, bounded retries, safe sub-agent fan-out, integration gates, and explicit close-out.",
+    "longDescription": "Turns a substantive written plan into a durable execution board and read-only HTML kanban snapshot, then works it through a controller-owned loop with test-first tasks, bounded retries, safe sub-agent fan-out, structured coordination messages, integration gates, and explicit close-out.",
     "developerName": "William Flanagan",
     "category": "Engineering",
     "capabilities": [
@@ -30,7 +30,8 @@
     "defaultPrompt": [
       "Execute this implementation plan with the plan loop executor.",
       "Turn this plan into a controller board and work it.",
-      "Resume the active plan loop board in this repo."
+      "Resume the active plan loop board in this repo.",
+      "Work this plan with sub-agents and structured coordination messages."
     ],
     "brandColor": "#2563EB"
   }

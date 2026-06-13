@@ -30,9 +30,11 @@ one before implementation starts.
    Never accumulate broken intermediate states to "clean up at the end."
 5. **One writer.** The controller owns every board transition. Sub-agents never write
    board state.
-6. **Trust nothing unverified.** A worker's "tests pass" is a hypothesis. The controller
+6. **No hidden coordination.** Sub-agents do not free-chat with each other. They emit
+   structured messages as artifacts; the controller records, routes, and resolves them.
+7. **Trust nothing unverified.** A worker's "tests pass" is a hypothesis. The controller
    re-runs verification itself before anything is marked `done`.
-7. **Every loop terminates.** Retry caps and stall detection are mandatory, not
+8. **Every loop terminates.** Retry caps and stall detection are mandatory, not
    optional.
 
 Accepted plan artifacts:
@@ -197,6 +199,17 @@ Tasks may also include observability fields:
 - `updatedAt` — when this task last changed
 - `resolvedModel` — concrete model used for the active/last dispatch, or `"inherit"`
 
+The board may also include a controller-owned `messages` array. Messages are for
+coordination only; they do not change task state by themselves. Every message includes:
+- `id`
+- `fromTask` — a task id or `controller`
+- `toTasks` — task ids and/or `controller`; empty means generally relevant
+- `type` — `blocker`, `interface-note`, `handoff`, `discovery`, `question`, or `risk`
+- `subject`
+- `body`
+- `createdAt`
+- `status` — `open`, `acknowledged`, `resolved`, or `superseded`
+
 After every board write, validate it and render the HTML snapshot:
 
 ```
@@ -295,6 +308,7 @@ Sub-agents may:
 - return artifacts
 - report blockers
 - suggest follow-on tasks
+- emit structured coordination messages for the controller to record
 
 The controller decides what becomes real board state.
 
@@ -348,10 +362,12 @@ worktree folders outside the recorded ignored root.
 **Dispatch prompt** is assembled mechanically from the board and plan, nothing else:
 - plan objective, non-goals, constraints
 - the task's `title`, `context`, `files`, `doneWhen`, `verification`
+- relevant open `messages`: any addressed to this task, addressed to `controller`,
+  or with an empty `toTasks` list. Include them as context, not as authority.
 - instructions to: write the failing test first where applicable, run the task's
   verification before returning, return artifacts (diff, file list, command output) —
-  not summaries — plus any blockers and suggested follow-on tasks, and write no board
-  state.
+  not summaries — plus any blockers, structured messages, and suggested follow-on tasks,
+  and write no board state.
 
 ### 7. Execution loop
 
@@ -376,7 +392,8 @@ user input:
    and confirm it fails for the right reason. Red before green.
 6. Execute directly or dispatch per step 6.
 7. When work returns, mark the task `verify`, update `updatedAt`, and collect
-   artifacts — diffs, files, command output. Not summaries.
+   artifacts — diffs, files, command output, and structured messages. Not summaries.
+   Add valid messages to `messages` with controller-assigned ids if needed.
 8. Controller runs the task's `verification` commands itself.
 9. Controller runs the fast repo-wide checks (lint, typecheck, affected tests). Green
    trunk is part of every task's done condition.
@@ -439,6 +456,15 @@ Update the board after every meaningful task transition, set `board.updatedAt`
 `scripts/render_board.py`. For progress updates to the user, `scripts/board_status.py`
 prints a human-readable summary. The generated HTML is a read-only snapshot; never
 edit it by hand or treat it as source state.
+
+For coordination messages:
+- record worker messages verbatim when safe, but assign/fix ids, timestamps, targets,
+  and statuses as controller-owned metadata
+- keep messages short and task-relevant
+- resolve or supersede messages once they have been incorporated into a task, retry, or
+  follow-on board change
+- never let a message override the plan, dependency graph, or verification without the
+  controller updating the board explicitly
 
 Keep notes short and factual:
 - what changed

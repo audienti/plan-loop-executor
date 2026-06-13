@@ -6,7 +6,8 @@ task loop.
 
 It is meant for work that is too large to execute safely from chat memory alone:
 multi-task implementation plans, dependency sequencing, test-first execution,
-sub-agent fan-out, resumable state, and explicit verification gates.
+sub-agent fan-out, structured coordination messages, resumable state, and explicit
+verification gates.
 
 ## What the plugin provides
 
@@ -47,9 +48,10 @@ The controller then:
 5. Breaks the plan into narrow, verifiable tasks.
 6. Writes verification before or with implementation.
 7. Fills safe sub-agent capacity when tasks are independent.
-8. Runs task verification and repo checks before marking work done.
-9. Commits one green task at a time.
-10. Stops only when acceptance criteria pass, the board stalls, or a real blocker
+8. Records structured sub-agent messages through the controller.
+9. Runs task verification and repo checks before marking work done.
+10. Commits one green task at a time.
+11. Stops only when acceptance criteria pass, the board stalls, or a real blocker
    needs user input.
 
 The board is the source of truth, not the transcript.
@@ -66,6 +68,11 @@ exists; otherwise it creates `.worktrees/` and adds `.worktrees/` to
 The HTML board is generated from the JSON board and is read-only. Refresh the HTML file
 to see current task titles, columns, in-flight worktrees, model routing, blockers, and a
 parallelization audit that explains whether available sub-agent capacity is being used.
+
+Sub-agents do not use peer-to-peer chat. They can emit structured messages such as
+`blocker`, `interface-note`, `handoff`, `discovery`, `question`, and `risk`; the
+controller records them on the board, routes relevant open messages into future
+dispatch prompts, and resolves them once incorporated.
 
 ## Model routing
 

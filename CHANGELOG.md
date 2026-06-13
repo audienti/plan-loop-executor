@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 - 2026-06-13
+
+- Added a controller-mediated `messages` log for structured sub-agent coordination.
+- Added message validation for ids, task references, message types, and statuses.
+- Updated board status and HTML rendering to surface open coordination messages.
+- Updated dispatch instructions so relevant open messages are included as context for
+  future sub-agent runs without allowing peer-to-peer hidden state.
+
 ## 0.3.0 - 2026-06-13
 
 - Added `render_board.py`, which generates a read-only HTML kanban snapshot from the
