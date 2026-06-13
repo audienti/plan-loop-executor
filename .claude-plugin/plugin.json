@@ -1,7 +1,7 @@
 {
   "name": "plan-loop-executor",
   "description": "Execute written implementation plans through a controller-owned, test-first task loop for Claude Code.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "William Flanagan",
     "email": "wflanagan@audienti.com"

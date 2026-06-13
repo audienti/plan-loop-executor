@@ -42,6 +42,17 @@ def validate(data):
     elif not base.get("verifiedGreen"):
         warnings.append("board.base.verifiedGreen is false — green trunk has no verified baseline")
 
+    viewer = board.get("viewer")
+    if viewer is None:
+        warnings.append("board.viewer is unset — HTML board rendering path will use <board>.html")
+    elif not isinstance(viewer, dict):
+        errors.append("board.viewer must be an object when set")
+    elif viewer.get("htmlPath") is not None and not isinstance(viewer.get("htmlPath"), str):
+        errors.append("board.viewer.htmlPath must be a string when set")
+
+    if board.get("parallelismNote") is not None and not isinstance(board.get("parallelismNote"), str):
+        errors.append("board.parallelismNote must be a string when set")
+
     models = board.get("models")
     if models is not None:
         if not isinstance(models, dict):
@@ -103,11 +114,23 @@ def validate(data):
                 warnings.append(f"{tid}: no doneWhen criteria")
             if not t.get("context"):
                 warnings.append(f"{tid}: no context for a cold worker")
+        if status in {"running", "verify"}:
+            if not t.get("updatedAt"):
+                warnings.append(f"{tid}: {status} but updatedAt is unset")
+            if t.get("ownerLane") == "subagent":
+                if not t.get("worktree"):
+                    warnings.append(f"{tid}: subagent {status} but worktree is unset")
+                if not t.get("resolvedModel"):
+                    warnings.append(f"{tid}: subagent {status} but resolvedModel is unset")
 
     cap = board.get("concurrencyCap")
-    in_flight = sum(1 for t in tasks if t.get("status") in {"running", "verify"})
+    in_flight = sum(
+        1
+        for t in tasks
+        if t.get("status") in {"running", "verify"} and t.get("ownerLane") == "subagent"
+    )
     if isinstance(cap, int) and in_flight > cap:
-        warnings.append(f"{in_flight} tasks in flight exceeds concurrencyCap {cap}")
+        warnings.append(f"{in_flight} subagent tasks in flight exceeds concurrencyCap {cap}")
 
     # dependency cycle check (Kahn's algorithm)
     indeg = {i: 0 for i in by_id}

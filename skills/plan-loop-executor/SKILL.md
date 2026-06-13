@@ -4,9 +4,10 @@ description: >
   Execute a substantive implementation plan through a controller loop that requires a
   written plan artifact first. Use when the user says "implement this plan", "execute the
   plan", "work the plan", "run this as a loop", "use sub-agents", "turn this plan into a
-  board", "controller loop", "kanban", or "requires a plan" for non-trivial coding or
-  product changes. Not for trivial work: if the plan yields fewer than ~4 independently
-  verifiable tasks, skip the board and implement directly.
+  board", "controller loop", "kanban", "show me the board", "parallelize the plan", or
+  "requires a plan" for non-trivial coding or product changes. Not for trivial work: if
+  the plan yields fewer than ~4 independently verifiable tasks, skip the board and
+  implement directly.
 ---
 
 # Plan Loop Executor
@@ -56,7 +57,8 @@ controller are overhead with no payoff. Implement directly with ordinary care.
 Turn a plan into:
 1. a durable execution board
 2. a controller-owned task loop
-3. verified implementation progress
+3. a read-only HTML kanban snapshot
+4. verified implementation progress
 
 The board is the visible state. The controller loop is the engine.
 
@@ -184,15 +186,26 @@ acceptance criteria pass, `abandoned` if the effort is stopped early (record why
 `board.base` records the preflight baseline from step 2.
 `board.worktreeRoot` records the repo-local ignored directory used for sub-agent git
 worktrees, usually `.worktrees/`.
+`board.viewer.htmlPath` records the generated read-only HTML snapshot path, usually
+`docs/plans/<plan-slug>-board.html`.
+`board.parallelismNote` records the controller's current reason when capacity is not
+being filled or when a fan-out decision matters.
 
-After every board write, validate it:
+Tasks may also include observability fields:
+- `worktree` — repo-local worktree path used by a dispatched sub-agent
+- `startedAt` — when the current/last active attempt started
+- `updatedAt` — when this task last changed
+- `resolvedModel` — concrete model used for the active/last dispatch, or `"inherit"`
+
+After every board write, validate it and render the HTML snapshot:
 
 ```
 python3 scripts/validate_board.py docs/plans/<plan-slug>-board.json
+python3 scripts/render_board.py docs/plans/<plan-slug>-board.json
 ```
 
-(`scripts/validate_board.py` lives in this skill's directory.) A board that fails
-validation is fixed before anything else happens.
+(`scripts/validate_board.py` and `scripts/render_board.py` live in this skill's
+directory.) A board that fails validation is fixed before anything else happens.
 
 ### 4. Turn the plan into a task graph
 
@@ -214,6 +227,10 @@ Sequencing rules:
   tasks build on are their own tasks, completed serially before implementations fan
   out. The classic parallel failure is two workers implementing against different
   assumed interfaces — prevent it structurally, not by hoping.
+- **Calendar time matters.** After interface tasks are complete, bias toward exposing
+  independent `subagent` tasks with non-overlapping file ownership and concrete
+  verification. A plan that could safely run in parallel should not be decomposed as a
+  serial queue by default.
 - **Tests first.** Where practical, a task starts by writing its verification as a
   failing test, then implementing to green. For behavior changes, the regression test
   is part of the task, not a follow-up task.
@@ -263,7 +280,7 @@ Prefer:
 One agent acts as controller.
 
 The controller is responsible for:
-- selecting the next `ready` task
+- selecting the next safe batch of `ready` tasks
 - deciding what can run in parallel
 - dispatching sub-agents only for independent work
 - re-running verification itself on every returned task — worker reports are inputs,
@@ -293,6 +310,12 @@ Do not parallelize if tasks touch the same files or same behavioral seam.
 
 Default concurrency cap: 3 in-flight sub-agents (`running` + `verify`).
 
+On every loop pass, calculate available sub-agent capacity and try to fill it with the
+largest safe batch of independent `ready` sub-agent tasks. If capacity remains unused,
+record the reason in `board.parallelismNote` before continuing. Valid reasons include
+dependency gating, overlapping files, no available dispatch mechanism, pending
+controller verification, or a controller-lane task that must complete before fan-out.
+
 **Mechanism.** Dispatch means a real, fresh, non-interactive run per task — for
 example `codex exec "<dispatch prompt>"` from the repo root, Claude Code's
 non-interactive prompt mode, or this harness's native sub-agent primitive if one
@@ -319,8 +342,8 @@ if already at `max`, and record the substitution in the task's `notes`. If even
 
 When dispatch uses git worktrees, create them under `board.worktreeRoot` (for example
 `.worktrees/<plan-slug>/<task-id>/`) so task-local checkouts stay out of tracked
-repo state. Do not create ad hoc sibling worktree folders outside the recorded ignored
-root.
+repo state. Record that path in the task's `worktree`. Do not create ad hoc sibling
+worktree folders outside the recorded ignored root.
 
 **Dispatch prompt** is assembled mechanically from the board and plan, nothing else:
 - plan objective, non-goals, constraints
@@ -335,20 +358,32 @@ root.
 Repeat until acceptance criteria pass, a stall is detected, or a real blocker requires
 user input:
 
-1. Select the next `ready` task by the selection order in step 4.
-2. Mark it `running`.
-3. If its verification does not exist yet, write the failing test first and confirm it
-   fails for the right reason. Red before green.
-4. Execute directly or dispatch per step 6.
-5. When work returns, mark the task `verify` and collect artifacts — diffs, files,
-   command output. Not summaries.
-6. Controller runs the task's `verification` commands itself.
-7. Controller runs the fast repo-wide checks (lint, typecheck, affected tests). Green
+1. Promote newly unblocked tasks to `ready`.
+2. Run a parallelization audit:
+   - available capacity = `board.concurrencyCap` minus sub-agent tasks in `running` or
+     `verify`
+   - eligible tasks = `ready`, `ownerLane: "subagent"`, dependencies `done`, clear
+     verification, no overlapping files or behavioral seam with in-flight work
+   - dispatch the highest-priority safe batch up to available capacity
+   - if capacity remains unused, update `board.parallelismNote` with the concrete
+     reason instead of leaving the user to infer it
+3. For each dispatched task, mark it `running`, set `startedAt`, `updatedAt`,
+   `resolvedModel`, and `worktree` where applicable, then render the HTML board.
+4. If no dispatchable sub-agent work exists, select the next controller-lane `ready`
+   task by the selection order in step 4. Prefer controller tasks that unblock more
+   parallel work before ordinary serial implementation.
+5. If a selected task's verification does not exist yet, write the failing test first
+   and confirm it fails for the right reason. Red before green.
+6. Execute directly or dispatch per step 6.
+7. When work returns, mark the task `verify`, update `updatedAt`, and collect
+   artifacts — diffs, files, command output. Not summaries.
+8. Controller runs the task's `verification` commands itself.
+9. Controller runs the fast repo-wide checks (lint, typecheck, affected tests). Green
    trunk is part of every task's done condition.
-8. If everything passes:
+10. If everything passes:
    - commit, message referencing the task id; record the SHA in `commit`
    - mark the task `done`, record `outputs`, promote newly-unblocked tasks to `ready`
-9. If verification fails:
+11. If verification fails:
    - increment `attemptCount`, record the cause in `lastFailure`
    - attempt 2 must take a meaningfully different approach — the board says why the
      last attempt failed; use it
@@ -357,13 +392,13 @@ user input:
      escalation in `notes`
    - at attempt 3, stop retrying: mark `blocked` with the exact blocker, or split into
      smaller tasks
-10. **Integration gate.** Whenever a dependency chain completes — and before starting
+12. **Integration gate.** Whenever a dependency chain completes — and before starting
     any task that builds on multiple `done` tasks — run the plan-level
     `verificationCommands` (full suite). All green before moving on. Per-task green
     does not imply composed green; catch integration breakage here, not at close-out.
-11. **Stall check.** If a full pass over the board produces zero status transitions,
+13. **Stall check.** If a full pass over the board produces zero status transitions,
     the loop is stalled. Stop and report the true state. Do not keep iterating.
-12. Update the board, validate it, continue.
+14. Update the board, validate it, render the HTML snapshot, continue.
 
 ### 8. Verification is mandatory
 
@@ -400,8 +435,10 @@ If the plan defines phased rollout boundaries, preserve them.
 ### 10. Board maintenance rules
 
 Update the board after every meaningful task transition, set `board.updatedAt`
-(`date -u +%FT%TZ`), and validate with `scripts/validate_board.py`. For progress
-updates to the user, `scripts/board_status.py` prints a human-readable summary.
+(`date -u +%FT%TZ`), validate with `scripts/validate_board.py`, and render with
+`scripts/render_board.py`. For progress updates to the user, `scripts/board_status.py`
+prints a human-readable summary. The generated HTML is a read-only snapshot; never
+edit it by hand or treat it as source state.
 
 Keep notes short and factual:
 - what changed
@@ -436,9 +473,11 @@ If the effort is stopped early, set `board.status: "abandoned"` and record why.
 
 During execution:
 - give short progress updates
-- reference the active board path
+- reference the active board path and generated HTML path
 - say what task is being worked
 - announce routing on dispatch: task id, tier, and resolved model
+- if fewer sub-agents are running than `concurrencyCap`, say why in
+  `board.parallelismNote`
 - say what verified or blocked
 
 At completion:

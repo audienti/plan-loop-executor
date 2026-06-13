@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 - 2026-06-13
+
+- Added `render_board.py`, which generates a read-only HTML kanban snapshot from the
+  JSON board.
+- Added `board.viewer.htmlPath`, `board.parallelismNote`, and task observability fields
+  for worktree, timestamps, and resolved model.
+- Updated loop rules to audit available sub-agent capacity, fill safe parallel batches,
+  and record why capacity is unused.
+- Updated validation/status helpers to surface viewer and parallelization state without
+  breaking older boards.
+
 ## 0.2.0 - 2026-06-10
 
 - Added model routing: every task carries a `modelTier` (`fast`, `default`, `max`)

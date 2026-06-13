@@ -12,7 +12,8 @@ sub-agent fan-out, resumable state, and explicit verification gates.
 
 - A `plan-loop-executor` skill under `skills/plan-loop-executor/`
 - Board templates and examples under `skills/plan-loop-executor/assets/`
-- Board validation and status helpers under `skills/plan-loop-executor/scripts/`
+- Board validation, status, and HTML rendering helpers under
+  `skills/plan-loop-executor/scripts/`
 - Codex marketplace metadata at `.codex-plugin/plugin.json`
 - Claude Code marketplace metadata at `.claude-plugin/plugin.json`
 
@@ -42,11 +43,13 @@ The controller then:
 1. Checks for an existing active board and resumes it if present.
 2. Establishes a clean, verified baseline.
 3. Creates or updates a repo-local board file.
-4. Breaks the plan into narrow, verifiable tasks.
-5. Writes verification before or with implementation.
-6. Runs task verification and repo checks before marking work done.
-7. Commits one green task at a time.
-8. Stops only when acceptance criteria pass, the board stalls, or a real blocker
+4. Renders a read-only HTML kanban snapshot beside the board.
+5. Breaks the plan into narrow, verifiable tasks.
+6. Writes verification before or with implementation.
+7. Fills safe sub-agent capacity when tasks are independent.
+8. Runs task verification and repo checks before marking work done.
+9. Commits one green task at a time.
+10. Stops only when acceptance criteria pass, the board stalls, or a real blocker
    needs user input.
 
 The board is the source of truth, not the transcript.
@@ -59,6 +62,10 @@ During setup, the controller also ensures there is a repo-local gitignored workt
 root for sub-agent work. It reuses an obvious ignored worktree folder when one already
 exists; otherwise it creates `.worktrees/` and adds `.worktrees/` to
 `.gitignore`. Sub-agent git worktrees should then be created under that ignored root.
+
+The HTML board is generated from the JSON board and is read-only. Refresh the HTML file
+to see current task titles, columns, in-flight worktrees, model routing, blockers, and a
+parallelization audit that explains whether available sub-agent capacity is being used.
 
 ## Model routing
 
@@ -92,6 +99,7 @@ From the skill directory:
 ```bash
 python3 scripts/validate_board.py docs/plans/<slug>-board.json
 python3 scripts/board_status.py docs/plans/<slug>-board.json
+python3 scripts/render_board.py docs/plans/<slug>-board.json
 ```
 
 When invoked by the plugin, these paths are relative to
@@ -106,6 +114,7 @@ skills/plan-loop-executor/SKILL.md
 skills/plan-loop-executor/assets/board-template.json
 skills/plan-loop-executor/assets/example-board.json
 skills/plan-loop-executor/scripts/board_status.py
+skills/plan-loop-executor/scripts/render_board.py
 skills/plan-loop-executor/scripts/validate_board.py
 .worktrees/                       # created in target repos during loop setup when needed
 ```
@@ -153,4 +162,5 @@ Validate the plugin manifest and skill packaging with:
 python3 /Users/williamflanagan/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .
 python3 /Users/williamflanagan/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/plan-loop-executor
 python3 skills/plan-loop-executor/scripts/validate_board.py skills/plan-loop-executor/assets/example-board.json
+python3 skills/plan-loop-executor/scripts/render_board.py skills/plan-loop-executor/assets/example-board.json --output /tmp/plan-loop-example-board.html
 ```

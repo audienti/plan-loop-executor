@@ -13,6 +13,10 @@
     "controller": "current-agent",
     "concurrencyCap": 3,
     "worktreeRoot": ".worktrees",
+    "viewer": {
+      "htmlPath": "docs/plans/replace-me-board.html"
+    },
+    "parallelismNote": "",
     "models": {
       "fast": "inherit",
       "default": "inherit",
@@ -38,6 +42,10 @@
       "context": "Plan excerpt, files to read, and constraints a cold worker needs to execute this task without the chat transcript.",
       "doneWhen": [],
       "verification": [],
+      "worktree": "",
+      "startedAt": "",
+      "updatedAt": "",
+      "resolvedModel": "",
       "outputs": [],
       "attemptCount": 0,
       "lastFailure": "",

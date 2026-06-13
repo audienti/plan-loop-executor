@@ -29,10 +29,15 @@ def main():
     print(f"board:    {board.get('status', '?')}  (updated {board.get('updatedAt', '?')})")
     if board.get("worktreeRoot"):
         print(f"worktree: {board.get('worktreeRoot')}")
+    viewer = board.get("viewer") if isinstance(board.get("viewer"), dict) else {}
+    if viewer.get("htmlPath"):
+        print(f"viewer:   {viewer.get('htmlPath')}")
     print(
         f"progress: {len(by_status['done'])}/{len(tasks)} done   "
         + "  ".join(f"{s}:{len(v)}" for s, v in by_status.items() if v)
     )
+    if board.get("parallelismNote"):
+        print(f"parallel: {board.get('parallelismNote')}")
 
     in_flight = by_status["running"] + by_status["verify"]
     if in_flight:
@@ -41,7 +46,12 @@ def main():
             extra = f"  [attempt {t.get('attemptCount', 0) + 1}]" if t.get("attemptCount") else ""
             tier = t.get("modelTier")
             tier_tag = f"  [{tier}]" if tier and tier != "default" else ""
-            print(f"  {t.get('id')}: ({t.get('status')}) {t.get('title')}{extra}{tier_tag}")
+            model = f"  model={t.get('resolvedModel')}" if t.get("resolvedModel") else ""
+            worktree = f"  worktree={t.get('worktree')}" if t.get("worktree") else ""
+            print(
+                f"  {t.get('id')}: ({t.get('status')}) {t.get('title')}"
+                f"{extra}{tier_tag}{model}{worktree}"
+            )
 
     if by_status["blocked"]:
         print("\nblocked:")
